@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # English Bot
 
 **Learn English from content you actually want to read.** A self-hosted Telegram bot that sends you a daily digest of articles and podcasts on your interests, turns any of them into vocabulary for Quizlet, and lets you discuss it by voice — with corrections after every reply.
@@ -116,3 +117,7 @@ Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 For a commercial license (closed-source use or a hosted service without AGPL obligations), contact the author.
 
 © 2026 YOUR_NAME
+=======
+# DailyLingo
+Telegram bot that turns your favorite RSS feeds into a daily English digest: articles simplified to your level, with audio, translations and weekly mistake review. Powered by Groq LLMs. Self-hosted.
+>>>>>>> 1fc3da8991cc5b08573ff9e9d0f21d2e5457e001
