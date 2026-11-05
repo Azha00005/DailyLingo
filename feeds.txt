@@ -1,0 +1,14 @@
+# Формат: категория | адрес RSS-ленты (не главной страницы сайта!). Строки с # пропускаются.
+# Категория — просто метка для разнообразия дайджеста, называйте как удобно.
+
+# Проверенные ленты:
+psychology | https://aeon.co/feed.rss
+psychology | https://psyche.co/feed.rss
+psychology | https://www.spring.org.uk/feed
+art | https://www.themarginalian.org/feed/
+science | https://www.smithsonianmag.com/rss/science-nature/
+science | https://knowablemagazine.org/rss
+
+# Psychology Today: точный адрес ленты я не смогла проверить. Если оставить адрес сайта,
+# бот попробует найти ленту сам и напишет её в лог; тогда вставьте найденный адрес сюда.
+# psychology | https://www.psychologytoday.com/us

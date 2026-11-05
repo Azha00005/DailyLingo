@@ -1,0 +1,21 @@
+[project]
+name = "english-bot"
+version = "0.1.0"
+description = "Self-hosted Telegram bot for learning English from content you love: daily digest, vocabulary for Quizlet, voice discussions with instant corrections."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S"]
+ignore = ["E501", "S101", "S608", "S110", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

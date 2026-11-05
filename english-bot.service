@@ -1,0 +1,30 @@
+[Unit]
+Description=English learning Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/english-bot
+ExecStart=/home/ubuntu/english-bot/.venv/bin/python bot.py
+Restart=always
+RestartSec=10
+
+# --- Изоляция: даже при взломе бот не сможет менять систему ---
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/english-bot
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
