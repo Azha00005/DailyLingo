@@ -1,4 +1,4 @@
-"""Сбор свежих материалов из RSS, извлечение текста статей и начала подкастов."""
+"""Collects fresh materials from RSS, extracts article text and the start of podcasts."""
 import calendar
 import html
 import logging
@@ -23,7 +23,7 @@ def _clean(text: str) -> str:
 
 
 def read_feeds() -> list[tuple[str, str]]:
-    """feeds.txt: «категория | ссылка» или просто ссылка; строки с # пропускаются."""
+    """feeds.txt: "category | url" or just a url; lines starting with # are skipped."""
     feeds = []
     with open(FEEDS_FILE, encoding="utf-8") as f:
         for line in f:
@@ -39,7 +39,7 @@ def read_feeds() -> list[tuple[str, str]]:
 
 
 def _discover_feed(page: bytes, base_url: str) -> str | None:
-    """Ищет в HTML-странице ссылку на RSS/Atom: <link rel="alternate" type="application/rss+xml" href=...>."""
+    """Looks for an RSS/Atom link in an HTML page: <link rel="alternate" type="application/rss+xml" href=...>."""
     text = page[:300_000].decode("utf-8", "ignore")
     for tag in re.findall(r"<link\b[^>]*>", text, re.I):
         if (re.search(r"rel=[\"']?alternate", tag, re.I)
@@ -51,29 +51,29 @@ def _discover_feed(page: bytes, base_url: str) -> str | None:
 
 
 def _load_feed(url: str):
-    """Загружает ленту. Если по адресу оказалась обычная страница сайта — пробует найти на ней ленту."""
+    """Loads a feed. If the address turns out to be a regular web page, tries to find the feed on it."""
     data = net.fetch(url, FEED_MAX_BYTES)
     feed = feedparser.parse(data)
     if feed.entries:
         return feed
     found = _discover_feed(data, url)
     if found and found != url:
-        log.info("По адресу %s найдена лента %s — впишите её в feeds.txt", url, found)
+        log.info("At %s found feed %s — put it into feeds.txt", url, found)
         feed = feedparser.parse(net.fetch(found, FEED_MAX_BYTES))
     if not feed.entries:
-        log.warning("В %s нет записей: это не RSS-лента? Нужен адрес именно ленты (feed / rss).", url)
+        log.warning("No entries in %s: is it not an RSS feed? You need the feed address itself (feed / rss).", url)
     return feed
 
 
 def fetch_candidates() -> list[dict]:
-    """Свежие записи из всех лент, новые сверху. Синхронно — вызывать через asyncio.to_thread."""
+    """Fresh entries from all feeds, newest first. Synchronous — call via asyncio.to_thread."""
     cutoff = time.time() - MAX_AGE_HOURS * 3600
     out = []
     for category, feed_url in read_feeds():
         try:
             feed = _load_feed(feed_url)
-        except Exception as exc:  # noqa: BLE001 — одна сломанная лента не должна ронять дайджест
-            log.warning("Лента %s недоступна: %s", feed_url, exc)
+        except Exception as exc:  # noqa: BLE001 — one broken feed must not break the digest
+            log.warning("Feed %s unavailable: %s", feed_url, exc)
             continue
         for entry in feed.entries[:30]:
             parsed = entry.get("published_parsed") or entry.get("updated_parsed")
@@ -92,7 +92,7 @@ def fetch_candidates() -> list[dict]:
                 continue
             out.append({
                 "url": link,
-                "title": _clean(entry.get("title", "")) or "(без названия)",
+                "title": _clean(entry.get("title", "")) or "(untitled)",
                 "category": category,
                 "kind": "podcast" if audio else "article",
                 "audio_url": audio,
@@ -104,13 +104,13 @@ def fetch_candidates() -> list[dict]:
 
 
 def extract_article(url: str) -> str:
-    """Чистый текст статьи. Синхронно — вызывать через asyncio.to_thread."""
+    """Clean article text. Synchronous — call via asyncio.to_thread."""
     page = net.fetch(url, ARTICLE_MAX_BYTES)
     text = trafilatura.extract(page) if page else None
     return (text or "")[:TEXT_LIMIT]
 
 
 def download_audio_head(url: str) -> bytes:
-    """Только начало выпуска (PODCAST_MAX_MB), чтобы уложиться в лимиты Whisper.
-    Синхронно — вызывать через asyncio.to_thread."""
+    """Only the start of an episode (PODCAST_MAX_MB) to fit Whisper limits.
+    Synchronous — call via asyncio.to_thread."""
     return net.fetch(url, PODCAST_MAX_MB * 1024 * 1024, truncate=True, deadline=180, timeout=60)

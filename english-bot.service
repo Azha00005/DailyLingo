@@ -10,7 +10,8 @@ ExecStart=/home/ubuntu/english-bot/.venv/bin/python bot.py
 Restart=always
 RestartSec=10
 
-# --- Изоляция: даже при взломе бот не сможет менять систему ---
+# --- Sandboxing: even if compromised, the bot cannot modify the system ---
+# Adjust User= and the paths in this file to match your server.
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true

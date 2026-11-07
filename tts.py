@@ -1,11 +1,11 @@
-"""Озвучка ответов бота бесплатными голосами Microsoft Edge."""
+"""Voices the bot's replies with free Microsoft Edge voices."""
 import edge_tts
 
 from config import TTS_RATE, TTS_VOICE
 
 
 async def synthesize(text: str) -> bytes:
-    """Возвращает MP3 — Telegram принимает его как голосовое сообщение."""
+    """Returns MP3 — Telegram accepts it as a voice message."""
     communicate = edge_tts.Communicate(text, TTS_VOICE, rate=TTS_RATE)
     audio = bytearray()
     async for chunk in communicate.stream():

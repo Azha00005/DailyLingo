@@ -1,8 +1,8 @@
-"""English Bot — простой вариант.
+"""DailyLingo — a self-hosted Telegram bot for learning English.
 
-Дайджест по интересам → 📖 упростить / 📚 слова для Quizlet / 🎙 голосовое обсуждение
-с исправлениями после каждой реплики. По воскресеньям — разбор ошибок за неделю.
-Запуск: python bot.py
+Interest-based digest → 📖 simplify / 📚 words for Quizlet / 🎙 voice discussion
+with corrections after every reply. On Sundays — a weekly review of your mistakes.
+Run: python bot.py
 """
 import asyncio
 import html
@@ -49,18 +49,18 @@ from locales import t
 
 log = logging.getLogger("bot")
 router = Router()
-# Бот только для вас и только в личном чате: чужие сообщения и группы игнорируются
+# The bot is for you only and only in a private chat: other users and groups are ignored
 router.message.filter(F.from_user.id == OWNER_ID, F.chat.type == "private")
 router.callback_query.filter(F.from_user.id == OWNER_ID, F.message.chat.type == "private")
 
-HISTORY_LIMIT = 12  # сколько последних реплик обсуждения помнит бот
+HISTORY_LIMIT = 12  # how many recent discussion turns the bot remembers
 
 
 class Talk(StatesGroup):
     active = State()
 
 
-# ======================= форматирование =======================
+# ======================= formatting =======================
 def esc(value) -> str:
     return html.escape(str(value or ""), quote=False)
 
@@ -79,7 +79,7 @@ def words_list(cards: list[dict]) -> str:
 
 
 def quizlet_block(cards: list[dict]) -> str:
-    """Строки «слово|перевод — пример» для импорта в Quizlet с разделителем |."""
+    """Lines like "word|translation — example" for Quizlet import with the | separator."""
     def field(s: str) -> str:
         return s.replace("|", "/").replace("\n", " ").strip()
 
@@ -126,7 +126,7 @@ def item_keyboard(item: dict) -> InlineKeyboardMarkup:
 
 
 async def send_long(bot: Bot, text: str) -> None:
-    """Делит длинный текст по абзацам, чтобы уложиться в лимит Telegram (4096 символов)."""
+    """Splits long text by paragraph to fit the Telegram limit (4096 characters)."""
     chunks, current = [], ""
     for part in text.split("\n\n"):
         candidate = f"{current}\n\n{part}" if current else part
@@ -135,7 +135,7 @@ async def send_long(bot: Bot, text: str) -> None:
             continue
         if current:
             chunks.append(current)
-        while len(part) > 4000:  # аварийная нарезка очень длинного абзаца
+        while len(part) > 4000:  # emergency split of a very long paragraph
             cut = part.rfind("\n", 0, 4000)
             cut = cut if cut > 0 else 4000
             chunks.append(part[:cut])
@@ -154,17 +154,17 @@ async def send_voice_reply(bot: Bot, text: str) -> None:
         audio = await tts.synthesize(text)
         if audio:
             await bot.send_voice(OWNER_ID, BufferedInputFile(audio, "reply.mp3"))
-    except Exception:  # noqa: BLE001 — без озвучки обсуждение всё равно работает
-        log.exception("Озвучка не удалась")
+    except Exception:  # noqa: BLE001 — the discussion works without voice anyway
+        log.exception("Text-to-speech failed")
 
 
 def typing(bot: Bot):
     return ChatActionSender.typing(bot=bot, chat_id=OWNER_ID)
 
 
-# ======================= материалы =======================
+# ======================= materials =======================
 async def ensure_text(item: dict) -> str:
-    """Текст статьи или расшифровка начала подкаста; сохраняется в БД."""
+    """Article text or transcript of the start of a podcast; saved to the DB."""
     if item["text"]:
         return item["text"]
     text = ""
@@ -176,7 +176,7 @@ async def ensure_text(item: dict) -> str:
         else:
             text = await asyncio.to_thread(digest.extract_article, item["url"])
     except Exception:  # noqa: BLE001
-        log.exception("Не удалось получить текст материала %s", item["url"])
+        log.exception("Failed to get the text of material %s", item["url"])
     text = (text or item["description"] or item["title"])[:TEXT_LIMIT]
     db.update_item(item["id"], text=text)
     item["text"] = text
@@ -216,7 +216,7 @@ async def send_digest(bot: Bot) -> None:
         async with typing(bot):
             items = await build_digest()
     except Exception as exc:  # noqa: BLE001
-        log.exception("Дайджест не собрался")
+        log.exception("Digest failed")
         await bot.send_message(OWNER_ID, t("digest_failed", error=esc(exc)))
         return
     if not items:
@@ -237,7 +237,7 @@ async def send_review(bot: Bot, manual: bool = False) -> None:
         async with typing(bot):
             result = await ai.weekly_review(errors[-60:])
     except Exception as exc:  # noqa: BLE001
-        log.exception("Разбор ошибок не удался")
+        log.exception("Mistake review failed")
         await bot.send_message(OWNER_ID, t("review_failed", error=esc(exc)))
         return
     topics = [t for t in result.get("topics") or [] if isinstance(t, dict) and t.get("title")]
@@ -259,7 +259,7 @@ async def send_review(bot: Bot, manual: bool = False) -> None:
         await send_long(bot, "\n\n".join(parts))
 
 
-# ======================= команды =======================
+# ======================= commands =======================
 @router.message(CommandStart())
 async def on_start(message: Message) -> None:
     await message.answer(t("start", time=DIGEST_TIME))
@@ -299,7 +299,7 @@ async def on_end(message: Message, state: FSMContext, bot: Bot) -> None:
     await send_long(bot, text)
 
 
-# ======================= кнопки под материалом =======================
+# ======================= buttons under a material =======================
 async def _item_from_callback(cb: CallbackQuery, note: str) -> dict | None:
     await cb.answer(note)
     item = db.get_item(int(cb.data.split(":", 1)[1]))
@@ -354,7 +354,7 @@ async def on_talk(cb: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     await send_voice_reply(bot, question)
 
 
-# ======================= обсуждение =======================
+# ======================= discussion =======================
 async def process_turn(message: Message, state: FSMContext, bot: Bot, user_text: str) -> None:
     user_text = user_text.strip()
     if not user_text:
@@ -385,7 +385,7 @@ async def process_turn(message: Message, state: FSMContext, bot: Bot, user_text:
         better = ""
 
     if message.voice:
-        await message.answer(f"🗣 <i>{esc(user_text)}</i>")  # что распознал Whisper
+        await message.answer(f"🗣 <i>{esc(user_text)}</i>")  # what Whisper recognized
     await message.answer(esc(reply))
     await send_voice_reply(bot, reply)
     await message.answer(corrections_text(corrections, better))
@@ -414,10 +414,10 @@ async def on_other(message: Message) -> None:
     await message.answer(t("hint"))
 
 
-# ======================= запуск =======================
+# ======================= startup =======================
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    logging.getLogger("httpx").setLevel(logging.WARNING)  # не писать в логи адреса запросов
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # don't log request URLs
     db.init()
     bot = Bot(TELEGRAM_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML,
                                                             link_preview_is_disabled=True))
@@ -425,7 +425,7 @@ async def main() -> None:
     dp.include_router(router)
 
     async def on_error(event: ErrorEvent) -> bool:
-        log.exception("Ошибка обработки", exc_info=event.exception)
+        log.exception("Update handling error", exc_info=event.exception)
         try:
             await bot.send_message(OWNER_ID, t("error", error=esc(event.exception)[:300]))
         except Exception:  # noqa: BLE001
@@ -449,7 +449,7 @@ async def main() -> None:
         BotCommand(command="review", description=t("cmd_review")),
         BotCommand(command="end", description=t("cmd_end")),
     ])
-    log.info("Бот запущен")
+    log.info("Bot started")
     await dp.start_polling(bot)
 
 

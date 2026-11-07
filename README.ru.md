@@ -1,4 +1,4 @@
-# English Bot
+# DailyLingo
 
 [English version](README.md)
 
@@ -41,7 +41,7 @@ art | https://another-site.com/rss
 
 ## 3. Запуск на Windows (для проверки)
 ```powershell
-cd english-bot
+cd DailyLingo
 py -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt

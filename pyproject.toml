@@ -1,5 +1,5 @@
 [project]
-name = "english-bot"
+name = "dailylingo"
 version = "0.1.0"
 description = "Self-hosted Telegram bot for learning English from content you love: daily digest, vocabulary for Quizlet, voice discussions with instant corrections."
 readme = "README.md"

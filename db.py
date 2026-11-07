@@ -1,4 +1,4 @@
-"""SQLite: материалы дайджеста и ваши ошибки для воскресного разбора."""
+"""SQLite: digest materials and your mistakes for the weekly review."""
 import sqlite3
 from contextlib import closing
 
@@ -13,10 +13,10 @@ CREATE TABLE IF NOT EXISTS items (
     kind        TEXT NOT NULL DEFAULT 'article',   -- article | podcast
     audio_url   TEXT,
     description TEXT,
-    blurb       TEXT,       -- одна строка для дайджеста
-    text        TEXT,       -- текст статьи или расшифровка подкаста
-    summary     TEXT,       -- краткое содержание для обсуждения
-    simple      TEXT,       -- пересказ на уровне B1
+    blurb       TEXT,       -- one-line blurb for the digest
+    text        TEXT,       -- article text or podcast transcript
+    summary     TEXT,       -- short summary for the discussion
+    simple      TEXT,       -- B1-level retelling
     sent_at     TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS errors (

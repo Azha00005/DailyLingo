@@ -1,11 +1,11 @@
-"""Безопасная загрузка по ссылкам из RSS-лент.
+"""Safe downloading of links from RSS feeds.
 
-Ссылки в лентах пишут чужие люди, поэтому:
-- только http/https и стандартные порты;
-- только публичные IP: никаких localhost, внутренней сети и сервиса метаданных облака (169.254.169.254);
-- каждый редирект проверяется заново;
-- лимит размера (считается уже распакованный ответ — защита от gzip-бомб) и общий лимит времени.
-Остаётся теоретический риск DNS rebinding между проверкой и подключением; для личного бота он приемлем.
+Links in feeds are written by strangers, so:
+- only http/https and standard ports;
+- only public IPs: no localhost, internal network or cloud metadata service (169.254.169.254);
+- every redirect is re-checked;
+- a size limit (counted on the decompressed response — protects against gzip bombs) and an overall time limit.
+A theoretical DNS rebinding risk remains between the check and the connection; it is acceptable for a personal bot.
 """
 import ipaddress
 import socket
@@ -25,26 +25,26 @@ class UnsafeURL(ValueError):
 def check_url(url: str) -> None:
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        raise UnsafeURL(f"Недопустимая ссылка: {url[:100]}")
+        raise UnsafeURL(f"Invalid link: {url[:100]}")
     if parsed.port not in (None, 80, 443):
-        raise UnsafeURL(f"Нестандартный порт: {url[:100]}")
+        raise UnsafeURL(f"Non-standard port: {url[:100]}")
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
     try:
         infos = socket.getaddrinfo(parsed.hostname, port, proto=socket.IPPROTO_TCP)
     except socket.gaierror as exc:
-        raise UnsafeURL(f"Адрес не найден: {parsed.hostname}") from exc
+        raise UnsafeURL(f"Host not found: {parsed.hostname}") from exc
     for info in infos:
         ip = ipaddress.ip_address(info[4][0].split("%")[0])
         if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
             ip = ip.ipv4_mapped
         if not ip.is_global or ip.is_multicast:
-            raise UnsafeURL(f"Адрес во внутренней сети: {parsed.hostname}")
+            raise UnsafeURL(f"Host in an internal network: {parsed.hostname}")
 
 
 def fetch(url: str, max_bytes: int, *, truncate: bool = False,
           deadline: float = 60, timeout: float = 20) -> bytes:
-    """Скачивает не больше max_bytes. truncate=True — вернуть начало, иначе ошибка.
-    Синхронно: из асинхронного кода вызывать через asyncio.to_thread."""
+    """Downloads at most max_bytes. truncate=True returns the beginning, otherwise raises an error.
+    Synchronous: from async code call via asyncio.to_thread."""
     started = time.monotonic()
     with httpx.Client(timeout=timeout, follow_redirects=False, headers=HEADERS) as http:
         for _ in range(MAX_REDIRECTS + 1):
@@ -53,23 +53,23 @@ def fetch(url: str, max_bytes: int, *, truncate: bool = False,
                 if resp.is_redirect:
                     location = resp.headers.get("location")
                     if not location:
-                        raise UnsafeURL("Редирект без адреса")
+                        raise UnsafeURL("Redirect without a location")
                     url = urljoin(url, location)
                     continue
                 resp.raise_for_status()
                 length = resp.headers.get("content-length", "")
                 if not truncate and length.isdigit() and int(length) > max_bytes:
-                    raise ValueError(f"Слишком большой ответ: {length} байт")
+                    raise ValueError(f"Response too large: {length} bytes")
                 buf = bytearray()
                 for chunk in resp.iter_bytes():
                     buf.extend(chunk)
                     if len(buf) > max_bytes:
                         if truncate:
                             return bytes(buf[:max_bytes])
-                        raise ValueError("Слишком большой ответ")
+                        raise ValueError("Response too large")
                     if time.monotonic() - started > deadline:
                         if truncate:
                             return bytes(buf)
-                        raise TimeoutError("Загрузка заняла слишком много времени")
+                        raise TimeoutError("Download took too long")
                 return bytes(buf)
-    raise UnsafeURL("Слишком много редиректов")
+    raise UnsafeURL("Too many redirects")
