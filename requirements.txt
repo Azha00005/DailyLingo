@@ -1,5 +1,5 @@
 # Exact versions checked with pip-audit (no known vulnerabilities as of 2026-11-04)
-aiogram==3.31.0
+aiogram==3.32.0
 APScheduler==3.11.3
 openai==3.45.0
 edge-tts==7.3.1
